@@ -1,5 +1,5 @@
 services:
-  app:
+  kitto:
     image: ghcr.io/ducheved/gomymoney:latest
     environment:
       - BOT_TOKEN=${API_TOKEN}

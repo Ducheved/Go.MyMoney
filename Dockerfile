@@ -7,5 +7,12 @@ RUN go build -o gomymoney ./main.go
 
 FROM alpine:3.20
 WORKDIR /app
+
+ARG {BOT_TOKEN}
+ARG {DATABASE_URL}
+
+ENV BOT_TOKEN=${BOT_TOKEN}
+ENV DATABASE_URL=${DATABASE_URL}
+
 COPY --from=builder /app/gomymoney .
 CMD ["./gomymoney"]
