@@ -15,6 +15,7 @@ type Repository interface {
 	SaveUser(user *models.User) error
 	GetUserByID(userID int64) (*models.User, error)
 	RegisterChat(chat *models.Chat) error
+	BeginTransaction() *gorm.DB
 }
 
 type GormRepository struct {
@@ -71,4 +72,8 @@ func (r *GormRepository) GetUserByID(userID int64) (*models.User, error) {
 
 func (r *GormRepository) RegisterChat(chat *models.Chat) error {
 	return r.db.Create(chat).Error
+}
+
+func (r *GormRepository) BeginTransaction() *gorm.DB {
+	return r.db.Begin()
 }
