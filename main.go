@@ -2,14 +2,13 @@ package main
 
 import (
 	"log"
-	"net/url"
 	"os"
-	"strings"
 
 	"go-mymoney/bots"
 	"go-mymoney/db"
 	"go-mymoney/repository"
 	"go-mymoney/service"
+	"go-mymoney/utils"
 
 	"github.com/joho/godotenv"
 	"gopkg.in/telebot.v3"
@@ -28,32 +27,7 @@ func main() {
 		log.Fatalf("Переменная окружения DATABASE_URL не задана")
 	}
 
-	start := strings.Index(dsn, "://") + 3
-	end := strings.Index(dsn[start:], "@")
-	if end == -1 {
-		log.Fatalf("Не удалось найти пароль в строке DSN")
-	}
-	end += start
-
-	userInfo := dsn[start:end]
-	rest := dsn[end:]
-
-	userPass := strings.SplitN(userInfo, ":", 2)
-	if len(userPass) != 2 {
-		log.Fatalf("Не удалось разделить имя пользователя и пароль в строке DSN")
-	}
-	username := userPass[0]
-	password := userPass[1]
-
-	escapedPassword := url.QueryEscape(password)
-
-	escapedUserInfo := username + ":" + escapedPassword
-	dsn = dsn[:start] + escapedUserInfo + rest
-
-	_, err := url.Parse(dsn)
-	if err != nil {
-		log.Fatalf("Не удалось распарсить DSN: %v", err)
-	}
+	dsn = utils.EscapePasswordInDSN(dsn)
 
 	database, err := db.NewPostgresDB(dsn)
 	if err != nil {

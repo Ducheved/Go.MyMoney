@@ -4,7 +4,7 @@ import (
 	"errors"
 	"go-mymoney/models"
 	"go-mymoney/repository"
-	validators "go-mymoney/utils"
+	"go-mymoney/utils"
 	"log"
 
 	"gorm.io/gorm"
@@ -27,7 +27,7 @@ func NewService(repo repository.Repository) Service {
 }
 
 func (s *BotService) ProcessMessage(userID, chatID int64, message string) error {
-	amount, currency, err := validators.ValidateMessageFormat(message)
+	amount, currency, err := utils.ValidateMessageFormat(message)
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func (s *BotService) ProcessMessage(userID, chatID int64, message string) error 
 		amount *= 100
 	}
 
-	err = validators.ValidateAmount(amount)
+	err = utils.ValidateAmount(amount)
 	if err != nil {
 		tx.Rollback()
 		return err
