@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"strings"
 
 	"go-mymoney/bots"
 	"go-mymoney/db"
@@ -27,15 +28,31 @@ func main() {
 		log.Fatalf("Переменная окружения DATABASE_URL не задана")
 	}
 
-	parsedURL, err := url.Parse(dsn)
+	start := strings.Index(dsn, "://") + 3
+	end := strings.Index(dsn[start:], "@")
+	if end == -1 {
+		log.Fatalf("Не удалось найти пароль в строке DSN")
+	}
+	end += start
+
+	userInfo := dsn[start:end]
+	rest := dsn[end:]
+
+	userPass := strings.SplitN(userInfo, ":", 2)
+	if len(userPass) != 2 {
+		log.Fatalf("Не удалось разделить имя пользователя и пароль в строке DSN")
+	}
+	username := userPass[0]
+	password := userPass[1]
+
+	escapedPassword := url.QueryEscape(password)
+
+	escapedUserInfo := username + ":" + escapedPassword
+	dsn = dsn[:start] + escapedUserInfo + rest
+
+	_, err := url.Parse(dsn)
 	if err != nil {
 		log.Fatalf("Не удалось распарсить DSN: %v", err)
-	}
-	if parsedURL.User != nil {
-		username := parsedURL.User.Username()
-		password, _ := parsedURL.User.Password()
-		parsedURL.User = url.UserPassword(username, url.QueryEscape(password))
-		dsn = parsedURL.String()
 	}
 
 	database, err := db.NewPostgresDB(dsn)
