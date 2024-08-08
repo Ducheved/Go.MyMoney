@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/url"
 	"os"
 
 	"go-mymoney/bots"
@@ -24,6 +25,16 @@ func main() {
 	}
 	if dsn == "" {
 		log.Fatalf("Переменная окружения DATABASE_URL не задана")
+	}
+
+	parsedURL, err := url.Parse(dsn)
+	if err != nil {
+		log.Fatalf("Не удалось распарсить DSN: %v", err)
+	}
+	if parsedURL.User != nil {
+		password, _ := parsedURL.User.Password()
+		parsedURL.User = url.UserPassword(parsedURL.User.Username(), url.QueryEscape(password))
+		dsn = parsedURL.String()
 	}
 
 	database, err := db.NewPostgresDB(dsn)
