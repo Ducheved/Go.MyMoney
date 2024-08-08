@@ -2,12 +2,10 @@ package service
 
 import (
 	"errors"
-	"log"
-	"regexp"
-	"strconv"
-
 	"go-mymoney/models"
 	"go-mymoney/repository"
+	validators "go-mymoney/utils"
+	"log"
 
 	"gorm.io/gorm"
 )
@@ -42,31 +40,20 @@ func (s *BotService) ProcessMessage(userID, chatID int64, message string) error 
 		return err
 	}
 
-	re := regexp.MustCompile(`([+-]\d+)([a-zA-Zа-яА-Я$€]+)`)
-	matches := re.FindStringSubmatch(message)
-	if len(matches) != 3 {
-		tx.Rollback()
-		return errors.New("invalid message format")
-	}
-
-	amount, err := strconv.ParseFloat(matches[1], 64)
+	amount, currency, err := validators.ValidateMessageFormat(message)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	if matches[2] == "" {
-		tx.Rollback()
-		return errors.New("currency must be specified")
-	}
-
-	if matches[2] == "$" || matches[2] == "доллар" || matches[2] == "евро" || matches[2] == "€" {
+	if currency == "$" || currency == "доллар" || currency == "евро" || currency == "€" {
 		amount *= 100
 	}
 
-	if amount > 10000 || amount < -10000 {
+	err = validators.ValidateAmount(amount)
+	if err != nil {
 		tx.Rollback()
-		return errors.New("amount exceeds the maximum limit of ±10000")
+		return err
 	}
 
 	chat, err := s.repo.GetChatByID(chatID)

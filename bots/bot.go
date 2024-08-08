@@ -2,11 +2,11 @@ package bots
 
 import (
 	"fmt"
+	"go-mymoney/service"
+	validators "go-mymoney/utils"
 	"log"
 	"regexp"
 	"strconv"
-
-	"go-mymoney/service"
 
 	"gopkg.in/telebot.v3"
 )
@@ -28,14 +28,12 @@ func HandleText(c telebot.Context, svc service.Service) error {
 		return c.Send("Сообщение вида 0+0 или +0 не обрабатывается")
 	}
 
-	urlRe := regexp.MustCompile(`https?://[^\s]+`)
-	if urlRe.MatchString(c.Text()) {
+	if validators.ValidateURL(c.Text()) {
 		log.Printf("Сообщение содержит URL и не обрабатывается: %s", c.Text())
 		return c.Send("Сообщение содержит URL и не обрабатывается")
 	}
 
-	sqlRe := regexp.MustCompile(`(?i)(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|UNION|--|;|')`)
-	if sqlRe.MatchString(c.Text()) {
+	if validators.ValidateSQLInjection(c.Text()) {
 		log.Printf("Сообщение содержит попытку SQL-инъекции и не обрабатывается: %s", c.Text())
 		return c.Send("Сообщение содержит попытку SQL-инъекции и не обрабатывается")
 	}
