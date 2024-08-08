@@ -29,7 +29,8 @@ func HandleText(c telebot.Context, svc service.Service) error {
 
 	amount, currency, err := validators.ValidateMessageFormat(c.Text())
 	if err != nil {
-		return c.Send(fmt.Sprintf("Ошибка валидации сообщения: %v", err))
+		// return c.Send(fmt.Sprintf("Ошибка валидации сообщения: %v", err))
+		return nil
 	}
 
 	sign := "+"
