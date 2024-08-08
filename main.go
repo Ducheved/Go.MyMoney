@@ -14,13 +14,17 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Ошибка загрузки файла .env: %v", err)
-	}
+	_ = godotenv.Load()
 
 	token := os.Getenv("BOT_TOKEN")
 	dsn := os.Getenv("DATABASE_URL")
+
+	if token == "" {
+		log.Fatalf("Переменная окружения BOT_TOKEN не задана")
+	}
+	if dsn == "" {
+		log.Fatalf("Переменная окружения DATABASE_URL не задана")
+	}
 
 	database, err := db.NewPostgresDB(dsn)
 	if err != nil {
