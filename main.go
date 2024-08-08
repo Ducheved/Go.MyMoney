@@ -32,8 +32,9 @@ func main() {
 		log.Fatalf("Не удалось распарсить DSN: %v", err)
 	}
 	if parsedURL.User != nil {
+		username := parsedURL.User.Username()
 		password, _ := parsedURL.User.Password()
-		parsedURL.User = url.UserPassword(parsedURL.User.Username(), url.QueryEscape(password))
+		parsedURL.User = url.UserPassword(username, url.QueryEscape(password))
 		dsn = parsedURL.String()
 	}
 
