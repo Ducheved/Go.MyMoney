@@ -6,10 +6,30 @@ import (
 	"strconv"
 )
 
+var validCurrencies = map[string]bool{
+	"руб":      true,
+	"рубль":    true,
+	"рублей":   true,
+	"рубли":    true,
+	"$":        true,
+	"доллар":   true,
+	"долларов": true,
+	"€":        true,
+	"евро":     true,
+}
+
 func ValidateMessageFormat(message string) (float64, string, error) {
-	re := regexp.MustCompile(`([+-]\d+)([a-zA-Zа-яА-Я$€]+)`)
+	if ValidateSQLInjection(message) {
+		return 0, "", errors.New("message contains SQL injection attempt")
+	}
+
+	if ValidateURL(message) {
+		return 0, "", errors.New("message contains URL")
+	}
+
+	re := regexp.MustCompile(`([+-]?\d+(\.\d+)?)([a-zA-Zа-яА-Я$€]+)`)
 	matches := re.FindStringSubmatch(message)
-	if len(matches) != 3 {
+	if len(matches) != 4 {
 		return 0, "", errors.New("invalid message format")
 	}
 
@@ -18,11 +38,16 @@ func ValidateMessageFormat(message string) (float64, string, error) {
 		return 0, "", err
 	}
 
-	if matches[2] == "" {
-		return 0, "", errors.New("currency must be specified")
+	currency := matches[3]
+	if !validCurrencies[currency] {
+		return 0, "", errors.New("invalid currency")
 	}
 
-	return amount, matches[2], nil
+	if err := ValidateAmount(amount); err != nil {
+		return 0, "", err
+	}
+
+	return amount, currency, nil
 }
 
 func ValidateAmount(amount float64) error {

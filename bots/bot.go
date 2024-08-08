@@ -23,51 +23,34 @@ func HandleText(c telebot.Context, svc service.Service) error {
 		return c.Send(fmt.Sprintf("Текущий баланс: %.2f₽", balance))
 	}
 
-	if c.Text() == "0+0" || c.Text() == "+0" {
-		log.Printf("Сообщение вида 0+0 или +0 не обрабатывается: %s", c.Text())
-		return c.Send("Сообщение вида 0+0 или +0 не обрабатывается")
+	amount, currency, err := validators.ValidateMessageFormat(c.Text())
+	if err != nil {
+		log.Printf("Ошибка валидации сообщения: %v", err)
 	}
 
-	if validators.ValidateURL(c.Text()) {
-		log.Printf("Сообщение содержит URL и не обрабатывается: %s", c.Text())
-		return c.Send("Сообщение содержит URL и не обрабатывается")
+	sign := "+"
+	if amount < 0 {
+		sign = "-"
+		amount = -amount
 	}
 
-	if validators.ValidateSQLInjection(c.Text()) {
-		log.Printf("Сообщение содержит попытку SQL-инъекции и не обрабатывается: %s", c.Text())
-		return c.Send("Сообщение содержит попытку SQL-инъекции и не обрабатывается")
+	action := "добавили"
+	if sign == "-" {
+		action = "убавили"
 	}
 
-	re := regexp.MustCompile(`([+-])(\d+)([a-zA-Zа-яА-Я$€]+)`)
-	matches := re.FindStringSubmatch(c.Text())
-	log.Printf("Обработка сообщения: %s, найденные совпадения: %v", c.Text(), matches)
-	if len(matches) == 4 {
-		sign := matches[1]
-		amount, _ := strconv.ParseFloat(matches[2], 64)
-		currency := matches[3]
-
-		action := "добавили"
-		if sign == "-" {
-			action = "убавили"
-		}
-
-		err := svc.ProcessMessage(userID, chatID, sign+matches[2]+currency)
-		if err != nil {
-			return c.Send(fmt.Sprintf("Ошибка обработки сообщения: %v", err))
-		}
-
-		balance, err := svc.GetChatBalance(chatID)
-		if err != nil {
-			return c.Send(fmt.Sprintf("Ошибка получения баланса: %v", err))
-		}
-
-		log.Printf("Вы %s: %.2f %s для чата %d", action, amount, currency, chatID)
-		return c.Send(fmt.Sprintf("Вы %s: %.2f %s. Текущий баланс: %.2f %s", action, amount, currency, balance, currency))
-	} else {
-		log.Printf("Сообщение не распознано: %s", c.Text())
+	err = svc.ProcessMessage(userID, chatID, fmt.Sprintf("%s%.2f%s", sign, amount, currency))
+	if err != nil {
+		return err
 	}
 
-	return nil
+	balance, err := svc.GetChatBalance(chatID)
+	if err != nil {
+		return c.Send(fmt.Sprintf("Ошибка получения баланса: %v", err))
+	}
+
+	log.Printf("Вы %s: %.2f %s для чата %d", action, amount, currency, chatID)
+	return c.Send(fmt.Sprintf("Вы %s: %.2f %s. Текущий баланс: %.2f %s", action, amount, currency, balance, currency))
 }
 
 func HandleAddedToGroup(c telebot.Context, svc service.Service) error {

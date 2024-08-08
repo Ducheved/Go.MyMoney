@@ -27,6 +27,11 @@ func NewService(repo repository.Repository) Service {
 }
 
 func (s *BotService) ProcessMessage(userID, chatID int64, message string) error {
+	amount, currency, err := validators.ValidateMessageFormat(message)
+	if err != nil {
+		return err
+	}
+
 	tx := s.repo.BeginTransaction()
 	defer func() {
 		if r := recover(); r != nil {
@@ -34,13 +39,7 @@ func (s *BotService) ProcessMessage(userID, chatID int64, message string) error 
 		}
 	}()
 
-	err := s.RegisterUserIfNotExists(userID)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	amount, currency, err := validators.ValidateMessageFormat(message)
+	err = s.RegisterUserIfNotExists(userID)
 	if err != nil {
 		tx.Rollback()
 		return err
