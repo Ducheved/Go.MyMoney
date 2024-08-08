@@ -1,0 +1,64 @@
+name: 📚🤖 Build and Push Docker Image
+run-name: 🚀 ${{ github.actor }} have started the pipeline
+on:
+  push:
+    branches:
+      - main
+env:
+  GO_VERSION: 1.20
+  DOCKER_REGISTRY_URL: ghcr.io
+jobs:
+  Docker-Build:
+    name: 🛠️🐳 Build the Docker image
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🌳 Clone the project
+      uses: actions/checkout@v4
+    - name: 🐹 Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    - name: 🔐 Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.DOCKER_REGISTRY_URL }}
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: 🏷️ Set Build Version and Date
+      run: |
+        echo "BUILD_VERSION=${{ github.sha }}" >> $GITHUB_ENV
+        echo "BUILD_DATE=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
+    - name: 🎁 Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: 🐳 Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ hashFiles('**/Dockerfile', '**/*.go') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+    - name: 🛠️ Set Repository Name in Lowercase
+      run: echo "REPO_NAME=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+    - name: 🐳 Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          ${{ env.DOCKER_REGISTRY_URL }}/${{ env.REPO_NAME }}/gomymoney:${{ env.BUILD_VERSION }}
+          ${{ env.DOCKER_REGISTRY_URL }}/${{ env.REPO_NAME }}/gomymoney:latest
+          ${{ env.DOCKER_REGISTRY_URL }}/${{ env.REPO_NAME }}/gomymoney:${{ env.BUILD_DATE }}
+          ${{ env.DOCKER_REGISTRY_URL }}/${{ env.REPO_NAME }}/gomymoney:release-${{ github.run_number }}
+        build-args: BUILD_VERSION=${{ env.BUILD_VERSION }}
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new
+    - name: 🐳 Move Docker cache
+      run: |
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
