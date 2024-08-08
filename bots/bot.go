@@ -18,30 +18,33 @@ func HandleText(c telebot.Context, svc service.Service) error {
 	if c.Text() == "/balance" {
 		balance, err := svc.GetChatBalance(chatID)
 		if err != nil {
-			return c.Send("Ошибка получения баланса")
+			return c.Send(fmt.Sprintf("Ошибка получения баланса: %v", err))
 		}
-		return c.Send(fmt.Sprintf("Текущий баланс: %.2f₽", balance))
+		return c.Send(fmt.Sprintf("Текущий баланс: %.2f", balance))
+	}
+
+	if len(c.Text()) >= len("/gen ") && c.Text()[:len("/gen ")] == "/gen " {
+		return handleGenCommand(c)
 	}
 
 	amount, currency, err := validators.ValidateMessageFormat(c.Text())
 	if err != nil {
-		log.Printf("Ошибка валидации сообщения: %v", err)
+		return c.Send(fmt.Sprintf("Ошибка валидации сообщения: %v", err))
 	}
 
 	sign := "+"
 	if amount < 0 {
 		sign = "-"
-		amount = -amount
 	}
 
 	action := "добавили"
 	if sign == "-" {
-		action = "убавили"
+		action = "вычли"
 	}
 
 	err = svc.ProcessMessage(userID, chatID, fmt.Sprintf("%s%.2f%s", sign, amount, currency))
 	if err != nil {
-		return err
+		return c.Send(fmt.Sprintf("Ошибка обработки сообщения: %v", err))
 	}
 
 	balance, err := svc.GetChatBalance(chatID)
