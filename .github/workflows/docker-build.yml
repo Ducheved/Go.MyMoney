@@ -5,7 +5,7 @@ on:
     branches:
       - main
 env:
-  GO_VERSION: 1.20
+  GO_VERSION: 1.22.3
   DOCKER_REGISTRY_URL: ghcr.io
 jobs:
   Docker-Build:
@@ -35,6 +35,10 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      with:
+        driver: docker-container
     - name: 🐳 Cache Docker layers
       uses: actions/cache@v4
       with:
