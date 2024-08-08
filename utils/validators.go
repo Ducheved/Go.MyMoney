@@ -19,19 +19,19 @@ var validCurrencies = map[string]bool{
 }
 
 func ValidateMessageFormat(message string) (float64, string, error) {
-	if ValidateSQLInjection(message) {
-		return 0, "", errors.New("message contains SQL injection attempt")
+	re := regexp.MustCompile(`([+-]?\d+(\.\d+)?)([a-zA-Zа-яА-Я$€]+)`)
+	matches := re.FindStringSubmatch(message)
+	if len(matches) != 4 {
+		return 0, "", errors.New("invalid message format")
 	}
 
 	if ValidateURL(message) {
 		return 0, "", errors.New("message contains URL")
 	}
 
-	re := regexp.MustCompile(`([+-]?\d+(\.\d+)?)([a-zA-Zа-яА-Я$€]+)`)
-	matches := re.FindStringSubmatch(message)
-	if len(matches) != 4 {
-		return 0, "", errors.New("invalid message format")
-	}
+	// if ValidateSQLInjection(message) {
+	// 	return 0, "", errors.New("message contains SQL injection attempt")
+	// }
 
 	amount, err := strconv.ParseFloat(matches[1], 64)
 	if err != nil {
@@ -58,8 +58,9 @@ func ValidateAmount(amount float64) error {
 }
 
 func ValidateSQLInjection(text string) bool {
+	// Исключаем допустимые символы валютных операций
 	sqlRe := regexp.MustCompile(`(?i)(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE|EXEC|UNION|--|;|')`)
-	return sqlRe.MatchString(text)
+	return sqlRe.MatchString(text) && !regexp.MustCompile(`^[+-]?\d+(\.\d+)?[a-zA-Zа-яА-Я$€]+$`).MatchString(text)
 }
 
 func ValidateURL(text string) bool {
